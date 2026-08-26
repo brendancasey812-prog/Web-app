@@ -2,12 +2,10 @@
 
 import { useMemo } from "react";
 import {
-  FOOTPRINT,
-  HOUSE_DEPTH,
-  HOUSE_WIDTH,
   MAIN_DEPTH,
   PALETTE,
   REAR_BUMP_WIDTH,
+  footprintBounds,
   ftIn,
   interiorWalls,
   levelBounds,
@@ -19,8 +17,10 @@ import {
 
 /* The drawing sheet, in px. The plan is fitted into it, so these never change. */
 const SHEET_W = 1000;
-const SHEET_H = 820;
 const SHEET_PAD = 18;
+/** Sheet height follows the plan's own proportions, within sane bounds. */
+const sheetHeight = (frameW: number, frameH: number) =>
+  Math.round(Math.min(1500, Math.max(760, (SHEET_W * frameH) / frameW)));
 
 /** Margin of blank paper around whatever is being framed, in feet. */
 const FRAME_MARGIN_FLOOR = 6.5;
@@ -310,7 +310,7 @@ export function FloorPlan({
   const pad = level.rooms.find((r) => r.exterior) ?? null;
 
   /* ---- Fit the framed area onto the sheet: feet → px. ------------------- */
-  const { s, ox, oy } = useMemo(() => {
+  const { s, ox, oy, sheetH } = useMemo(() => {
     const frame =
       selected && zoomToRoom
         ? {
@@ -328,14 +328,16 @@ export function FloorPlan({
               h: b.h + FRAME_MARGIN_FLOOR * 2,
             };
           })();
+    const h = sheetHeight(frame.w, frame.h);
     const scale = Math.min(
       (SHEET_W - SHEET_PAD * 2) / frame.w,
-      (SHEET_H - SHEET_PAD * 2) / frame.h,
+      (h - SHEET_PAD * 2) / frame.h,
     );
     return {
       s: scale,
       ox: (SHEET_W - frame.w * scale) / 2 - frame.x * scale,
-      oy: (SHEET_H - frame.h * scale) / 2 - frame.y * scale,
+      oy: (h - frame.h * scale) / 2 - frame.y * scale,
+      sheetH: h,
     };
   }, [selected, zoomToRoom, level]);
 
@@ -348,7 +350,7 @@ export function FloorPlan({
     const fx0 = Math.floor((0 - ox) / s) - 1;
     const fx1 = Math.ceil((SHEET_W - ox) / s) + 1;
     const fy0 = Math.floor((0 - oy) / s) - 1;
-    const fy1 = Math.ceil((SHEET_H - oy) / s) + 1;
+    const fy1 = Math.ceil((sheetH - oy) / s) + 1;
     const fine = s >= 34 ? 0.5 : 0; // 6" subdivisions once we are zoomed in far enough
     const lines: React.ReactElement[] = [];
     const step = fine || 1;
@@ -361,7 +363,7 @@ export function FloorPlan({
           x1={X(f)}
           y1={0}
           x2={X(f)}
-          y2={SHEET_H}
+          y2={sheetH}
           stroke={major ? PAPER_LINE_MAJOR : whole ? PAPER_LINE : PAPER_LINE_FINE}
           strokeWidth={major ? 1 : 0.6}
         />,
@@ -384,27 +386,27 @@ export function FloorPlan({
     }
     return lines;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showGrid, s, ox, oy]);
+  }, [showGrid, s, ox, oy, sheetH]);
 
   const walls = useMemo(() => interiorWalls(level), [level]);
-  const outline = FOOTPRINT.map(([fx, fy]) => `${X(fx)},${Y(fy)}`).join(" ");
+  const outline = level.footprint.map(([fx, fy]) => `${X(fx)},${Y(fy)}`).join(" ");
+  const foot = footprintBounds(level);
 
   /** Round bar length (ft) that draws at roughly 70px on the current zoom. */
   const barFt = [1, 2, 5, 10, 20].find((f) => f * s >= 70) ?? 20;
 
   return (
     <svg
-      viewBox={`0 0 ${SHEET_W} ${SHEET_H}`}
+      viewBox={`0 0 ${SHEET_W} ${sheetH}`}
       className="block h-auto w-full select-none"
       role="img"
       aria-label={`${level.name} floor plan`}
     >
       {/* Sheet */}
-      <rect x={0} y={0} width={SHEET_W} height={SHEET_H} fill={PAPER} />
+      <rect x={0} y={0} width={SHEET_W} height={sheetH} fill={PAPER} />
       {grid}
 
-      {/* Slab / footprint */}
-      <polygon points={outline} fill={PAPER} stroke="none" />
+      {/* No slab fill — the graph paper reads straight through the house. */}
 
       {/* Rooms */}
       {level.rooms.map((r) => {
@@ -416,7 +418,8 @@ export function FloorPlan({
               y={Y(r.y)}
               width={r.w * s}
               height={r.h * s}
-              fill={colorRooms ? PALETTE[r.cat].fill : PAPER}
+              fill={colorRooms ? PALETTE[r.cat].fill : "transparent"}
+              fillOpacity={colorRooms ? 0.85 : 1}
               opacity={dim ? 0.45 : 1}
               className="cursor-pointer"
               stroke={r.exterior ? INK_FAINT : undefined}
@@ -551,13 +554,13 @@ export function FloorPlan({
         </>
       ) : (
         <>
-          <Dim axis="h" from={0} to={HOUSE_WIDTH} at={-3.2} label={ftIn(HOUSE_WIDTH)} side={1} X={X} Y={Y} />
-          <Dim axis="v" from={0} to={HOUSE_DEPTH} at={-3.2} label={ftIn(HOUSE_DEPTH)} side={1} X={X} Y={Y} />
+          <Dim axis="h" from={0} to={foot.w} at={-3.2} label={ftIn(foot.w)} side={1} X={X} Y={Y} />
+          <Dim axis="v" from={0} to={foot.h} at={-3.2} label={ftIn(foot.h)} side={1} X={X} Y={Y} />
           <Dim
             axis="v"
             from={0}
             to={MAIN_DEPTH}
-            at={HOUSE_WIDTH + 3.2}
+            at={foot.w + 3.2}
             label={ftIn(MAIN_DEPTH)}
             side={-1}
             X={X}
@@ -591,7 +594,7 @@ export function FloorPlan({
               axis="h"
               from={0}
               to={REAR_BUMP_WIDTH}
-              at={HOUSE_DEPTH + 3.2}
+              at={foot.h + 3.2}
               label={ftIn(REAR_BUMP_WIDTH)}
               side={-1}
               X={X}
@@ -608,7 +611,7 @@ export function FloorPlan({
         </text>
         <text
           x={SHEET_W / 2}
-          y={SHEET_H - 8}
+          y={sheetH - 8}
           textAnchor="middle"
           fontSize={10.5}
           fill={INK_FAINT}
@@ -617,7 +620,7 @@ export function FloorPlan({
           ▼ REAR OF HOUSE
         </text>
         {/* Graphic scale bar — a round number of feet, roughly 90px long */}
-        <g transform={`translate(${SHEET_W - 150}, ${SHEET_H - 26})`}>
+        <g transform={`translate(${SHEET_W - 150}, ${sheetH - 26})`}>
           <rect x={0} y={-7} width={barFt * s} height={7} fill="none" stroke={DIM} strokeWidth={1} />
           <rect x={0} y={-7} width={(barFt * s) / 2} height={7} fill={DIM} fillOpacity={0.5} />
           <text x={barFt * s + 6} y={0} fontSize={10} fill={DIM}>

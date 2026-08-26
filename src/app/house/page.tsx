@@ -4,12 +4,13 @@ import { useState } from "react";
 import { DoorOpen, Grid3x3, Layers, Maximize2, Palette, Ruler, Sofa } from "lucide-react";
 import { FloorPlan } from "@/components/FloorPlan";
 import {
-  FLOOR_AREA,
   HOUSE_DEPTH,
   HOUSE_WIDTH,
   LEVELS,
   PALETTE,
+  TOTAL_AREA,
   doorsForRoom,
+  footprintBounds,
   ftIn,
   levelArea,
   roomArea,
@@ -77,9 +78,8 @@ export default function HousePlans() {
         <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">House plans</h1>
         <p className="mt-1 text-sm text-zinc-500">
           Four levels · {ftIn(HOUSE_WIDTH)} × {ftIn(HOUSE_DEPTH)} overall ·{" "}
-          {Math.round(FLOOR_AREA).toLocaleString()} sq ft per floor ·{" "}
-          {(Math.round(FLOOR_AREA) * LEVELS.length).toLocaleString()} sq ft total. Every
-          measurement is drawn to scale on the grid — ask me to change any of them.
+          {Math.round(TOTAL_AREA).toLocaleString()} sq ft enclosed. Every measurement is
+          drawn to scale on the grid — ask me to change any of them.
         </p>
       </header>
 
@@ -290,7 +290,10 @@ export default function HousePlans() {
                   ["Rooms", String(level.rooms.filter((r) => !r.exterior).length)],
                   ["Ceiling", ftIn(level.ceiling)],
                   ["Floor area", `${Math.round(enclosed)} sq ft`],
-                  ["Footprint", `${ftIn(HOUSE_WIDTH)} × ${ftIn(HOUSE_DEPTH)}`],
+                  [
+                    "Footprint",
+                    `${ftIn(footprintBounds(level).w)} × ${ftIn(footprintBounds(level).h)}`,
+                  ],
                 ].map(([k, v]) => (
                   <div key={k} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
                     <dt className="text-[10px] uppercase tracking-wide text-zinc-500">{k}</dt>

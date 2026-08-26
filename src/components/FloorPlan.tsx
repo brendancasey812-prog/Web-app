@@ -133,9 +133,9 @@ function RoomLabel({
 }) {
   const cx = X(r.x + r.w / 2);
   const cy = Y(r.y + r.h / 2);
-  /* Turn the label 90 degrees in a tall narrow room, so `across` is always the
-     direction the text runs and `down` the direction the lines stack. */
-  const rotate = r.h > r.w * 1.8;
+  /* Turn the label 90 degrees in a genuinely narrow room, so `across` is always
+     the direction the text runs and `down` the direction the lines stack. */
+  const rotate = r.h > r.w * 2;
   const across = (rotate ? r.h : r.w) * s;
   const down = (rotate ? r.w : r.h) * s;
   if (across < 46 || down < 18) return null;
@@ -307,7 +307,10 @@ export function FloorPlan({
 }: FloorPlanProps) {
   const selected = level.rooms.find((r) => r.id === selectedId) ?? null;
   /** A slab outside the wall line gets dimensioned in place of the rear bump-out. */
-  const pad = level.rooms.find((r) => r.exterior) ?? null;
+  const foot0 = footprintBounds(level);
+  /** A slab beyond the wall line gets dimensioned in place of the rear block. */
+  const pad =
+    level.rooms.find((r) => r.exterior && r.y + r.h > foot0.y + foot0.h + 1e-6) ?? null;
 
   /* ---- Fit the framed area onto the sheet: feet → px. ------------------- */
   const { s, ox, oy, sheetH } = useMemo(() => {
@@ -390,7 +393,7 @@ export function FloorPlan({
 
   const walls = useMemo(() => interiorWalls(level), [level]);
   const outline = level.footprint.map(([fx, fy]) => `${X(fx)},${Y(fy)}`).join(" ");
-  const foot = footprintBounds(level);
+  const foot = foot0;
 
   /** Round bar length (ft) that draws at roughly 70px on the current zoom. */
   const barFt = [1, 2, 5, 10, 20].find((f) => f * s >= 70) ?? 20;
@@ -493,7 +496,7 @@ export function FloorPlan({
           x2={X(w.bx)}
           y2={Y(w.by)}
           stroke={w.open ? INK_FAINT : WALL}
-          strokeWidth={w.open ? 1.2 : 2.6}
+          strokeWidth={w.open ? 1.2 : w.outer ? 4 : 2.6}
           strokeDasharray={w.open ? "7 6" : undefined}
           strokeLinecap="square"
           pointerEvents="none"

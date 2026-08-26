@@ -32,20 +32,28 @@
 export const HOUSE_WIDTH = 48; // ft, side to side
 export const MAIN_DEPTH = 30; // ft, front wall to the back of the main rectangle
 export const REAR_BUMP_WIDTH = 34; // ft, width of everything behind the main rectangle
-export const REAR_BUMP_DEPTH = 12; // ft, the first rear block — family room, man cave bump
-export const MASTER_WING_DEPTH = 20; // ft, the single-storey master wing beyond it
+/** First rear band, straight off the main rectangle: family room, man cave bump. */
+export const REAR_BAND_DEPTH = 12;
+/** Second rear band beyond it: master wing, guest suite, roof terrace. */
+export const REAR_WING_DEPTH = 20;
+/** Both bands together — how far the rear block runs behind the main rectangle. */
+export const REAR_BUMP_DEPTH = REAR_BAND_DEPTH + REAR_WING_DEPTH; // 32 ft
 
-/** Depth of a normal level: main rectangle plus the first rear block. */
-export const STD_DEPTH = MAIN_DEPTH + REAR_BUMP_DEPTH; // 42 ft
-/** Depth of the main level, which carries the master wing as well. */
-export const MAIN_LEVEL_DEPTH = STD_DEPTH + MASTER_WING_DEPTH; // 62 ft
+/**
+ * The three lower levels share one envelope. Where a level does not need
+ * rooms all the way to the back, it fills the rest with a balcony rather than
+ * stepping the wall in — so basement, main and upper stack as one clean box.
+ */
+export const FULL_DEPTH = MAIN_DEPTH + REAR_BUMP_DEPTH; // 62 ft
+/** The art studio is the one level allowed to be smaller. */
+export const STUDIO_DEPTH = 42;
 /** The deepest the house gets, used for the overall envelope. */
-export const HOUSE_DEPTH = MAIN_LEVEL_DEPTH;
+export const HOUSE_DEPTH = FULL_DEPTH;
 
 /**
  * The exterior wall line, walked clockwise from the front-left corner: the
  * same shape at every level — a rectangle with the extra room across the back
- * — just carried further back on the main level for the master wing.
+ * — stopping short only on the studio floor.
  */
 const footprintOfDepth = (depth: number): [number, number][] => [
   [0, 0],
@@ -56,13 +64,13 @@ const footprintOfDepth = (depth: number): [number, number][] => [
   [0, depth],
 ];
 
-/** Basement, upper level and studio. */
-export const FOOTPRINT_STD = footprintOfDepth(STD_DEPTH);
-/** The main level, reaching back past the family room to the master suite. */
-export const FOOTPRINT_MAIN = footprintOfDepth(MAIN_LEVEL_DEPTH);
+/** Basement, main level and upper level — one uniform envelope. */
+export const FOOTPRINT_FULL = footprintOfDepth(FULL_DEPTH);
+/** The art studio, which stops at the back of the first rear block. */
+export const FOOTPRINT_STUDIO = footprintOfDepth(STUDIO_DEPTH);
 
-/** Enclosed area of a normal level, in square feet. */
-export const STD_FLOOR_AREA =
+/** Gross area inside the wall line of a full-depth level, in square feet. */
+export const FULL_FLOOR_AREA =
   HOUSE_WIDTH * MAIN_DEPTH + REAR_BUMP_WIDTH * REAR_BUMP_DEPTH;
 
 /**
@@ -147,15 +155,16 @@ export interface Level {
 }
 
 /* ==========================================================================
- *  BASEMENT — man cave across the middle, laundry at the front, and a guest
- *  bedroom with its own bathroom in the rear bump-out.
+ *  BASEMENT — laundry at the front, man cave across the middle, then the home
+ *  theatre and a guest suite filling the rear block, so the level matches the
+ *  main floor's envelope exactly.
  * ========================================================================== */
 const basement: Level = {
   id: "basement",
   name: "Basement",
-  subtitle: "Man cave · guest room · laundry",
+  subtitle: "Man cave · theatre · guest suite",
   ceiling: 8.5,
-  footprint: FOOTPRINT_STD,
+  footprint: FOOTPRINT_FULL,
   rooms: [
     {
       id: "b-utility",
@@ -235,36 +244,74 @@ const basement: Level = {
       ],
     },
     {
-      id: "b-guest",
-      name: "Guest Bedroom",
-      cat: "sleep",
+      id: "b-theater",
+      name: "Home Theatre",
+      cat: "living",
       x: 0,
       y: 30,
-      w: 24,
-      h: 12,
-      note: "The basement's own bedroom, filling the rear bump-out — the minimum one bedroom on the lower level, kept as a guest suite now the master sits on the main floor.",
+      w: 34,
+      h: 14,
+      note: "Behind the man cave, on its own door so the light can be shut out. Two rows of recliners facing the screen wall.",
       fixtures: [
-        { label: "King bed", x: 8, y: 30.5, w: 6.6, h: 7, kind: "soft" },
-        { label: "Nightstand", x: 6.2, y: 30.5, w: 1.6, h: 1.8, kind: "soft" },
-        { label: "Nightstand", x: 15, y: 30.5, w: 1.6, h: 1.8, kind: "soft" },
-        { label: "Dresser", x: 0.4, y: 36, w: 1.8, h: 5, kind: "soft" },
-        { label: "Armchair", x: 19, y: 33, w: 3.5, h: 3.5, kind: "soft" },
+        { label: "Screen wall", x: 8, y: 30.4, w: 18, h: 1, kind: "built" },
+        { label: "Front row", x: 6, y: 34.5, w: 10, h: 3.5, kind: "soft" },
+        { label: "Rear row", x: 18, y: 34.5, w: 10, h: 3.5, kind: "soft" },
+        { label: "Snack counter", x: 6, y: 41, w: 12, h: 2, kind: "built" },
       ],
+    },
+    {
+      id: "b-store",
+      name: "Storage & Wine",
+      cat: "service",
+      x: 0,
+      y: 44,
+      w: 12,
+      h: 18,
+      note: "Cool corner at the back of the basement — wine racking and bulk shelving.",
+      fixtures: [
+        { label: "Wine racks", x: 0.4, y: 44.4, w: 1.8, h: 8, kind: "built" },
+        { label: "Shelving", x: 0.4, y: 54, w: 10, h: 2, kind: "built" },
+      ],
+    },
+    {
+      id: "b-hall",
+      name: "Guest Hall",
+      cat: "circ",
+      x: 12,
+      y: 44,
+      w: 10,
+      h: 6,
+      note: "Links the theatre to the guest suite, the bathroom and the stores.",
     },
     {
       id: "b-gbath",
       name: "Guest Bathroom",
       cat: "bath",
-      x: 24,
-      y: 30,
+      x: 12,
+      y: 50,
       w: 10,
       h: 12,
-      note: "Internal to the guest bedroom — one door, no access from the man cave.",
+      note: "Off the guest hall, serving the guest bedroom.",
       fixtures: [
-        { label: "Double vanity", x: 24.5, y: 30.5, w: 5.5, h: 2.2, kind: "plumb" },
-        { label: "Toilet", x: 31, y: 30.5, w: 2.5, h: 2.5, kind: "plumb" },
-        { label: "Linen", x: 31, y: 34, w: 2.5, h: 3, kind: "built" },
-        { label: "Walk-in shower", x: 24.5, y: 37.5, w: 5, h: 4, kind: "plumb" },
+        { label: "Vanity", x: 12.5, y: 50.5, w: 5, h: 2.2, kind: "plumb" },
+        { label: "Toilet", x: 12.5, y: 54, w: 2.5, h: 2.5, kind: "plumb" },
+        { label: "Shower", x: 17, y: 57, w: 4.5, h: 4, kind: "plumb" },
+      ],
+    },
+    {
+      id: "b-guest",
+      name: "Guest Bedroom",
+      cat: "sleep",
+      x: 22,
+      y: 44,
+      w: 12,
+      h: 18,
+      note: "The bedroom on the lower level, at the back of the basement with the guest bathroom across the hall.",
+      fixtures: [
+        { label: "Queen bed", x: 25, y: 44.5, w: 5.5, h: 7, kind: "soft" },
+        { label: "Nightstand", x: 23.2, y: 44.5, w: 1.6, h: 1.8, kind: "soft" },
+        { label: "Dresser", x: 31.6, y: 50, w: 2, h: 5, kind: "soft" },
+        { label: "Closet", x: 22.4, y: 58.5, w: 8, h: 2.5, kind: "built" },
       ],
     },
   ],
@@ -273,8 +320,11 @@ const basement: Level = {
     { x: 28, y: 3, axis: "v", w: 2.8, hand: 1, swing: 1, label: "Bathroom" },
     { x: 21, y: 14, axis: "h", w: 6, hand: 1, swing: 1, kind: "opening", label: "Landing into the man cave" },
     { x: 41, y: 14, axis: "h", w: 3, hand: 1, swing: -1, label: "Laundry" },
-    { x: 4, y: 30, axis: "h", w: 3.5, hand: 1, swing: 1, label: "Guest bedroom" },
-    { x: 24, y: 32, axis: "v", w: 2.8, hand: 1, swing: 1, label: "Guest bathroom" },
+    { x: 15, y: 30, axis: "h", w: 3.5, hand: 1, swing: 1, label: "Home theatre" },
+    { x: 15, y: 44, axis: "h", w: 3, hand: 1, swing: 1, label: "Guest hall" },
+    { x: 12, y: 45, axis: "v", w: 3, hand: 1, swing: -1, label: "Storage & wine" },
+    { x: 22, y: 45, axis: "v", w: 3, hand: 1, swing: 1, label: "Guest bedroom" },
+    { x: 14, y: 50, axis: "h", w: 2.8, hand: 1, swing: 1, label: "Guest bathroom" },
   ],
 };
 
@@ -288,7 +338,7 @@ const main: Level = {
   name: "Main Level",
   subtitle: "Kitchen · family · master suite",
   ceiling: 10,
-  footprint: FOOTPRINT_MAIN,
+  footprint: FOOTPRINT_FULL,
   rooms: [
     {
       id: "m-gym",
@@ -390,8 +440,8 @@ const main: Level = {
       x: 0,
       y: 30,
       w: REAR_BUMP_WIDTH,
-      h: REAR_BUMP_DEPTH,
-      note: "The rear bump-out. Kitchen and dining lead straight into it; couch faces the fireplace on the back wall.",
+      h: REAR_BAND_DEPTH,
+      note: "The first rear band. Kitchen and dining lead straight into it; couch faces the fireplace, and the master hall opens off the back wall.",
       openTo: ["m-kitchen", "m-dining"],
       fixtures: [
         { label: "Sectional couch", x: 4, y: 32.5, w: 14, h: 3.5, kind: "soft" },
@@ -443,7 +493,7 @@ const main: Level = {
       y: 48,
       w: 22,
       h: 14,
-      note: "At the very back of the house, past the family room and down the hall. A slider in the rear wall opens onto the balcony pad.",
+      note: "At the very back of the house, past the family room and down the hall. A slider in the rear wall opens onto the master patio, with the roof terrace one floor above it.",
       fixtures: [
         { label: "King bed", x: 7, y: 48.5, w: 6.6, h: 7, kind: "soft" },
         { label: "Nightstand", x: 5.2, y: 48.5, w: 1.6, h: 1.8, kind: "soft" },
@@ -472,14 +522,14 @@ const main: Level = {
     },
     {
       id: "m-pad",
-      name: "Balcony Pad",
+      name: "Master Patio",
       cat: "living",
       x: 0,
       y: 62,
       w: 22,
       h: 10,
       exterior: true,
-      note: "An unroofed slab added on behind the master bedroom. Not counted in the floor area.",
+      note: "The master's own outdoor slab, at grade behind the rear wall. It is paving rather than a floor, so it sits outside the uniform envelope and is not counted in the floor area.",
       fixtures: [
         { label: "Outdoor sofa", x: 2.5, y: 64, w: 8, h: 3, kind: "soft" },
         { label: "Fire table", x: 12.5, y: 64.5, w: 4, h: 4, kind: "soft" },
@@ -499,20 +549,21 @@ const main: Level = {
     { x: 22, y: 43.5, axis: "v", w: 2.8, hand: 1, swing: 1, label: "Linen & storage" },
     { x: 14, y: 48, axis: "h", w: 3.5, hand: 1, swing: 1, label: "Master bedroom" },
     { x: 22, y: 50, axis: "v", w: 3, hand: 1, swing: 1, label: "Master bathroom" },
-    { x: 6, y: 62, axis: "h", w: 6, hand: 1, swing: 1, kind: "slider", label: "Slider to the balcony pad" },
+    { x: 6, y: 62, axis: "h", w: 6, hand: 1, swing: 1, kind: "slider", label: "Slider to the master patio" },
   ],
 };
 
 /* ==========================================================================
- *  UPPER LEVEL — the two bedrooms and the hall bathroom at the front, with a
- *  game room and the office across the back where the master suite used to be.
+ *  UPPER LEVEL — the two bedrooms and the hall bathroom at the front, a game
+ *  room and the office through the middle, and a roof terrace over the master
+ *  wing filling out the back so this level matches the envelope below.
  * ========================================================================== */
 const upper: Level = {
   id: "upper",
   name: "Upper Level",
-  subtitle: "2 bedrooms · game room · office",
+  subtitle: "2 bedrooms · game room · terrace",
   ceiling: 9,
-  footprint: FOOTPRINT_STD,
+  footprint: FOOTPRINT_FULL,
   rooms: [
     {
       id: "u-bed2",
@@ -600,13 +651,13 @@ const upper: Level = {
       x: 0,
       y: 22,
       w: 14,
-      h: 20,
-      note: "The house office, moved up to the top floor and given a door off the hall so calls stay out of the way.",
+      h: 26,
+      note: "The house office, on the top floor with a door off the hall so calls stay out of the way.",
       fixtures: [
         { label: "Desk", x: 3.5, y: 23, w: 6.5, h: 2.5, kind: "soft" },
         { label: "Shelving", x: 0.4, y: 27, w: 1.8, h: 8, kind: "built" },
-        { label: "Meeting table", x: 4, y: 33, w: 7, h: 4, kind: "soft" },
-        { label: "Reading chair", x: 9.5, y: 38, w: 3.5, h: 3.5, kind: "soft" },
+        { label: "Meeting table", x: 4, y: 36, w: 7, h: 4, kind: "soft" },
+        { label: "Reading chair", x: 9.5, y: 43, w: 3.5, h: 3.5, kind: "soft" },
       ],
     },
     {
@@ -616,14 +667,31 @@ const upper: Level = {
       x: 14,
       y: 22,
       w: 20,
-      h: 20,
-      note: "Across the back of the top floor, over the family room below — table, screen and seating.",
+      h: 26,
+      note: "Over the family room below — table, screen and seating, with a slider straight out onto the roof terrace.",
       fixtures: [
         { label: "Media wall", x: 16, y: 22.4, w: 10, h: 1, kind: "built" },
         { label: "Sofa", x: 16, y: 27, w: 9, h: 3, kind: "soft" },
         { label: "Games table", x: 17, y: 32, w: 9, h: 5, kind: "soft" },
         { label: "Arcade cabinets", x: 30, y: 24, w: 3.5, h: 7, kind: "built" },
-        { label: "Bar cart", x: 29.5, y: 38, w: 4, h: 2.5, kind: "soft" },
+        { label: "Bar cart", x: 29.5, y: 43.5, w: 4, h: 2.5, kind: "soft" },
+      ],
+    },
+    {
+      id: "u-terrace",
+      name: "Roof Terrace",
+      cat: "living",
+      x: 0,
+      y: 48,
+      w: 34,
+      h: 14,
+      exterior: true,
+      note: "The balcony that squares this level off with the two below: an open deck on the roof of the master wing, so the envelope stays 48 ft by 62 ft without carrying rooms it does not need.",
+      fixtures: [
+        { label: "Outdoor sofa", x: 4, y: 50, w: 9, h: 3, kind: "soft" },
+        { label: "Fire table", x: 15.5, y: 50.5, w: 4, h: 4, kind: "soft" },
+        { label: "Loungers", x: 4, y: 55, w: 7, h: 2.5, kind: "soft" },
+        { label: "Planters", x: 28.5, y: 50, w: 4, h: 10, kind: "built" },
       ],
     },
     {
@@ -647,6 +715,7 @@ const upper: Level = {
     { x: 10.5, y: 22, axis: "h", w: 3, hand: 1, swing: 1, label: "Office" },
     { x: 18, y: 22, axis: "h", w: 6, hand: 1, swing: 1, kind: "opening", label: "Hall into the game room" },
     { x: 34.5, y: 22, axis: "h", w: 3, hand: 1, swing: 1, label: "Linen & storage" },
+    { x: 20, y: 48, axis: "h", w: 6, hand: 1, swing: 1, kind: "slider", label: "Slider to the roof terrace" },
   ],
 };
 
@@ -658,7 +727,7 @@ const studio: Level = {
   name: "Art Studio",
   subtitle: "Top floor",
   ceiling: 12,
-  footprint: FOOTPRINT_STD,
+  footprint: FOOTPRINT_STUDIO,
   rooms: [
     {
       id: "s-supply",
@@ -725,7 +794,7 @@ const studio: Level = {
       x: 0,
       y: 30,
       w: REAR_BUMP_WIDTH,
-      h: REAR_BUMP_DEPTH,
+      h: REAR_BAND_DEPTH,
       note: "The rear bump-out, glazed along the back wall for even light. Drafting and drying live here.",
       openTo: ["s-studio"],
       fixtures: [
@@ -814,16 +883,26 @@ export function sharedWall(a: Room, b: Room) {
 
 /** Every interior wall on a level, flagged as a solid wall or a cased opening. */
 export function interiorWalls(level: Level) {
-  const out: { ax: number; ay: number; bx: number; by: number; open: boolean }[] = [];
-  const rooms = level.rooms.filter((r) => !r.exterior);
+  const out: {
+    ax: number;
+    ay: number;
+    bx: number;
+    by: number;
+    open: boolean;
+    /** True where the wall separates heated rooms from a balcony or terrace. */
+    outer: boolean;
+  }[] = [];
+  const rooms = level.rooms;
   for (let i = 0; i < rooms.length; i++) {
     for (let j = i + 1; j < rooms.length; j++) {
       const a = rooms[i];
       const b = rooms[j];
       const seg = sharedWall(a, b);
       if (!seg) continue;
+      /* Two slabs meeting each other is a paving joint, not a wall. */
+      if (a.exterior && b.exterior) continue;
       const open = !!(a.openTo?.includes(b.id) || b.openTo?.includes(a.id));
-      out.push({ ...seg, open });
+      out.push({ ...seg, open, outer: !!(a.exterior || b.exterior) });
     }
   }
   return out;

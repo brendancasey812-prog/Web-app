@@ -47,15 +47,19 @@ export const FOOTPRINT: [number, number][] = [
 export const FLOOR_AREA =
   HOUSE_WIDTH * MAIN_DEPTH + REAR_BUMP_WIDTH * REAR_BUMP_DEPTH;
 
-/** Colour families, so rooms of a kind read the same across every level. */
+/**
+ * Colour families, so rooms of a kind read the same across every level.
+ * `fill` is the whisper-light wash printed on the white drawing sheet;
+ * `accent` is the saturated version used for tabs and legends in the dark UI.
+ */
 export const PALETTE = {
-  living: { fill: "#14201b", accent: "#34d399" },
-  cook: { fill: "#211d13", accent: "#fbbf24" },
-  sleep: { fill: "#181a27", accent: "#a78bfa" },
-  bath: { fill: "#101f28", accent: "#38bdf8" },
-  work: { fill: "#20151c", accent: "#f472b6" },
-  service: { fill: "#16171b", accent: "#94a3b8" },
-  circ: { fill: "#1c1d21", accent: "#cbd5e1" },
+  living: { fill: "#ecf7f1", accent: "#34d399" },
+  cook: { fill: "#fdf6e6", accent: "#fbbf24" },
+  sleep: { fill: "#f2f0fc", accent: "#a78bfa" },
+  bath: { fill: "#e9f4fc", accent: "#38bdf8" },
+  work: { fill: "#fcecf3", accent: "#f472b6" },
+  service: { fill: "#f3f5f8", accent: "#94a3b8" },
+  circ: { fill: "#fbfbfc", accent: "#cbd5e1" },
 } as const;
 
 export type Category = keyof typeof PALETTE;

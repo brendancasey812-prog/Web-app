@@ -24,11 +24,16 @@ const SHEET_PAD = 18;
 const FRAME_MARGIN_FLOOR = 6.5;
 const FRAME_MARGIN_ROOM = 5;
 
-const WALL = "#e8ecf4";
-const PAPER_LINE = "rgba(120, 190, 255, 0.16)";
-const PAPER_LINE_MAJOR = "rgba(120, 190, 255, 0.32)";
-const PAPER_LINE_FINE = "rgba(120, 190, 255, 0.07)";
-const DIM = "#7dd3fc";
+/* Black line on white paper, the way the drawing would come off a plotter. */
+const PAPER = "#ffffff";
+const INK = "#0b0b0c";
+const INK_SOFT = "#3f4753";
+const INK_FAINT = "#7b8595";
+const PAPER_LINE = "#dbe3ee";
+const PAPER_LINE_MAJOR = "#b6c4d6";
+const PAPER_LINE_FINE = "#eef2f7";
+const WALL = INK;
+const DIM = INK;
 
 /* ---- A dimension string: slash ticks, witness lines, boxed label. ----- */
 function Dim({
@@ -87,9 +92,9 @@ function Dim({
         width={boxW}
         height={16}
         rx={3}
-        fill="#08090c"
+        fill={PAPER}
         stroke={DIM}
-        strokeOpacity={0.35}
+        strokeOpacity={0.55}
       />
       <text
         x={mid.x}
@@ -106,9 +111,11 @@ function Dim({
   );
 }
 
-
-/* ---- Room label block, sized down as the room gets small on screen. --- */
-/* ---- Room label block, on a chip so it stays readable over furniture. --- */
+/* ---- Room label block, on a chip so it stays readable over furniture. ----
+ * Rooms are labelled the way a draughtsman would: horizontally where the name
+ * fits, turned on its side in a tall narrow room, and dropped to just the name
+ * (or nothing at all) when even that will not fit between the walls.
+ */
 function RoomLabel({
   r,
   dim,
@@ -124,41 +131,54 @@ function RoomLabel({
 }) {
   const cx = X(r.x + r.w / 2);
   const cy = Y(r.y + r.h / 2);
-  const pw = r.w * s;
-  const ph = r.h * s;
-  if (pw < 42 || ph < 20) return null;
-  const full = pw > 96 && ph > 52;
-  const withArea = full && ph > 74;
-  const accent = PALETTE[r.cat].accent;
+  /* Turn the label 90 degrees in a tall narrow room, so `across` is always the
+     direction the text runs and `down` the direction the lines stack. */
+  const rotate = r.h > r.w * 1.8;
+  const across = (rotate ? r.h : r.w) * s;
+  const down = (rotate ? r.w : r.h) * s;
+  if (across < 46 || down < 18) return null;
 
   const dims = `${ftIn(r.w)} × ${ftIn(r.h)}`;
   const area = `${Math.round(roomArea(r))} sq ft`;
-  const boxW =
+  const widthOf = (full: boolean, withArea: boolean) =>
     Math.max(
       r.name.length * (full ? 7.2 : 5.8),
       full ? dims.length * 6.3 : 0,
-      withArea ? area.length * 5.6 : 0,
+      full && withArea ? area.length * 5.6 : 0,
     ) + 16;
+
+  /* Step down through the variants until one fits between the walls. */
+  let full = across > 96 && down > 52;
+  let withArea = full && down > 74;
+  if (full && widthOf(full, withArea) > across - 6) withArea = false;
+  if (full && widthOf(full, withArea) > across - 6) full = false;
+  const boxW = widthOf(full, withArea);
+  if (boxW > across - 4) return null;
   const boxH = withArea ? 52 : full ? 38 : 18;
+  if (boxH > down - 4) return null;
 
   return (
-    <g pointerEvents="none" opacity={dim ? 0.35 : 1}>
+    <g
+      pointerEvents="none"
+      opacity={dim ? 0.4 : 1}
+      transform={rotate ? `rotate(-90 ${cx} ${cy})` : undefined}
+    >
       <rect
         x={cx - boxW / 2}
         y={cy - boxH / 2}
         width={boxW}
         height={boxH}
-        rx={4}
-        fill="#0a0d12"
-        opacity={0.86}
+        rx={3}
+        fill={PAPER}
+        opacity={0.88}
       />
       <text
         x={cx}
         y={full ? cy - boxH / 2 + 16 : cy + 4}
         textAnchor="middle"
         fontSize={full ? 13 : 10}
-        fontWeight={600}
-        fill={accent}
+        fontWeight={700}
+        fill={INK}
       >
         {r.name}
       </text>
@@ -169,13 +189,13 @@ function RoomLabel({
             y={cy - boxH / 2 + 32}
             textAnchor="middle"
             fontSize={11.5}
-            fill="#dfe4ec"
+            fill={INK_SOFT}
             style={{ fontVariantNumeric: "tabular-nums" }}
           >
             {dims}
           </text>
           {withArea && (
-            <text x={cx} y={cy - boxH / 2 + 46} textAnchor="middle" fontSize={10} fill="#8b93a1">
+            <text x={cx} y={cy - boxH / 2 + 46} textAnchor="middle" fontSize={10} fill={INK_FAINT}>
               {area}
             </text>
           )}
@@ -194,6 +214,8 @@ export interface FloorPlanProps {
   zoomToRoom: boolean;
   showGrid: boolean;
   showFixtures: boolean;
+  /** Wash each room in its category tint. Off = a plain black-line-on-white drawing. */
+  colorRooms: boolean;
 }
 
 export function FloorPlan({
@@ -203,6 +225,7 @@ export function FloorPlan({
   zoomToRoom,
   showGrid,
   showFixtures,
+  colorRooms,
 }: FloorPlanProps) {
   const selected = level.rooms.find((r) => r.id === selectedId) ?? null;
 
@@ -257,7 +280,7 @@ export function FloorPlan({
           x2={X(f)}
           y2={SHEET_H}
           stroke={major ? PAPER_LINE_MAJOR : whole ? PAPER_LINE : PAPER_LINE_FINE}
-          strokeWidth={major ? 1.1 : 0.7}
+          strokeWidth={major ? 1 : 0.6}
         />,
       );
     }
@@ -272,7 +295,7 @@ export function FloorPlan({
           x2={SHEET_W}
           y2={Y(f)}
           stroke={major ? PAPER_LINE_MAJOR : whole ? PAPER_LINE : PAPER_LINE_FINE}
-          strokeWidth={major ? 1.1 : 0.7}
+          strokeWidth={major ? 1 : 0.6}
         />,
       );
     }
@@ -294,11 +317,11 @@ export function FloorPlan({
       aria-label={`${level.name} floor plan`}
     >
       {/* Sheet */}
-      <rect x={0} y={0} width={SHEET_W} height={SHEET_H} fill="#0a0d12" />
+      <rect x={0} y={0} width={SHEET_W} height={SHEET_H} fill={PAPER} />
       {grid}
 
       {/* Slab / footprint */}
-      <polygon points={outline} fill="#0e1218" stroke="none" />
+      <polygon points={outline} fill={PAPER} stroke="none" />
 
       {/* Rooms */}
       {level.rooms.map((r) => {
@@ -310,8 +333,8 @@ export function FloorPlan({
               y={Y(r.y)}
               width={r.w * s}
               height={r.h * s}
-              fill={PALETTE[r.cat].fill}
-              opacity={dim ? 0.4 : 1}
+              fill={colorRooms ? PALETTE[r.cat].fill : PAPER}
+              opacity={dim ? 0.45 : 1}
               className="cursor-pointer"
             />
             {selected?.id === r.id && (
@@ -320,8 +343,8 @@ export function FloorPlan({
                 y={Y(r.y)}
                 width={r.w * s}
                 height={r.h * s}
-                fill={PALETTE[r.cat].accent}
-                opacity={0.09}
+                fill={colorRooms ? PALETTE[r.cat].accent : INK}
+                opacity={colorRooms ? 0.16 : 0.06}
                 pointerEvents="none"
               />
             )}
@@ -333,9 +356,8 @@ export function FloorPlan({
       {showFixtures &&
         level.rooms.map((r) => {
           const dim = !!selected && selected.id !== r.id;
-          const accent = PALETTE[r.cat].accent;
           return (
-            <g key={`fx-${r.id}`} opacity={dim ? 0.22 : 0.95} pointerEvents="none">
+            <g key={`fx-${r.id}`} opacity={dim ? 0.25 : 1} pointerEvents="none">
               {(r.fixtures ?? []).map((f, i) => {
                 const pw = f.w * s;
                 const ph = f.h * s;
@@ -347,11 +369,11 @@ export function FloorPlan({
                       width={pw}
                       height={ph}
                       rx={f.kind === "soft" ? Math.min(4, pw / 6) : 1}
-                      fill={accent}
-                      fillOpacity={0.09}
-                      stroke={accent}
-                      strokeOpacity={0.55}
-                      strokeWidth={1}
+                      fill={PAPER}
+                      fillOpacity={0.5}
+                      stroke={INK_SOFT}
+                      strokeOpacity={0.75}
+                      strokeWidth={0.9}
                       strokeDasharray={f.kind === "built" ? "3 2" : undefined}
                     />
                     {pw > f.label.length * 5.4 + 8 && ph > 14 && (
@@ -360,8 +382,8 @@ export function FloorPlan({
                         y={Y(f.y + f.h / 2) + 3.5}
                         textAnchor="middle"
                         fontSize={9.5}
-                        fill={accent}
-                        opacity={0.75}
+                        fill={INK_SOFT}
+                        opacity={0.85}
                       >
                         {f.label}
                       </text>
@@ -381,8 +403,8 @@ export function FloorPlan({
           y1={Y(w.ay)}
           x2={X(w.bx)}
           y2={Y(w.by)}
-          stroke={w.open ? "rgba(232,236,244,0.3)" : WALL}
-          strokeWidth={w.open ? 1.4 : 3}
+          stroke={w.open ? INK_FAINT : WALL}
+          strokeWidth={w.open ? 1.2 : 2.6}
           strokeDasharray={w.open ? "7 6" : undefined}
           strokeLinecap="square"
           pointerEvents="none"
@@ -394,7 +416,7 @@ export function FloorPlan({
         points={outline}
         fill="none"
         stroke={WALL}
-        strokeWidth={6}
+        strokeWidth={5}
         strokeLinejoin="miter"
         pointerEvents="none"
       />
@@ -433,8 +455,8 @@ export function FloorPlan({
             width={selected.w * s}
             height={selected.h * s}
             fill="none"
-            stroke={PALETTE[selected.cat].accent}
-            strokeWidth={2.5}
+            stroke={INK}
+            strokeWidth={2.6}
             pointerEvents="none"
           />
         </>
@@ -467,7 +489,7 @@ export function FloorPlan({
 
       {/* Orientation + scale note */}
       <g pointerEvents="none">
-        <text x={SHEET_W / 2} y={18} textAnchor="middle" fontSize={10.5} fill="#6b7480" letterSpacing={2}>
+        <text x={SHEET_W / 2} y={18} textAnchor="middle" fontSize={10.5} fill={INK_FAINT} letterSpacing={2}>
           FRONT OF HOUSE ▲
         </text>
         <text
@@ -475,7 +497,7 @@ export function FloorPlan({
           y={SHEET_H - 8}
           textAnchor="middle"
           fontSize={10.5}
-          fill="#6b7480"
+          fill={INK_FAINT}
           letterSpacing={2}
         >
           ▼ REAR OF HOUSE

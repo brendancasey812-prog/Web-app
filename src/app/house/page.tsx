@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Grid3x3, Layers, Maximize2, Ruler, Sofa } from "lucide-react";
+import { Grid3x3, Layers, Maximize2, Palette, Ruler, Sofa } from "lucide-react";
 import { FloorPlan } from "@/components/FloorPlan";
 import {
   FLOOR_AREA,
@@ -55,6 +55,7 @@ export default function HousePlans() {
   const [showGrid, setShowGrid] = useState(true);
   const [showFixtures, setShowFixtures] = useState(true);
   const [zoomToRoom, setZoomToRoom] = useState(true);
+  const [colorRooms, setColorRooms] = useState(false);
 
   const level = LEVELS.find((l) => l.id === levelId) ?? LEVELS[1];
   const room = level.rooms.find((r) => r.id === roomId) ?? null;
@@ -148,7 +149,7 @@ export default function HousePlans() {
               <div className="text-[11px] text-zinc-500">
                 {room
                   ? `${ftIn(room.w)} wide × ${ftIn(room.h)} deep · ${Math.round(roomArea(room))} sq ft`
-                  : `Scaled plan · 1 ft grid, heavier line every 5 ft`}
+                  : `Scaled plan · black line on white, 1 ft grid, heavier line every 5 ft`}
               </div>
             </div>
             <div className="flex gap-1.5">
@@ -158,6 +159,12 @@ export default function HousePlans() {
                 onClick={() => setShowFixtures((v) => !v)}
                 icon={Sofa}
                 label="Furniture"
+              />
+              <Toggle
+                on={colorRooms}
+                onClick={() => setColorRooms((v) => !v)}
+                icon={Palette}
+                label="Colour"
               />
               <Toggle
                 on={zoomToRoom}
@@ -174,6 +181,7 @@ export default function HousePlans() {
             zoomToRoom={zoomToRoom}
             showGrid={showGrid}
             showFixtures={showFixtures}
+            colorRooms={colorRooms}
           />
         </section>
 
@@ -265,7 +273,9 @@ export default function HousePlans() {
 
           {/* Legend */}
           <div className="card rounded-2xl p-4">
-            <h3 className="mb-2 text-[10px] uppercase tracking-wide text-zinc-500">Legend</h3>
+            <h3 className="mb-2 text-[10px] uppercase tracking-wide text-zinc-500">
+              Room types {colorRooms ? "" : "(turn on Colour to wash the plan)"}
+            </h3>
             <ul className="space-y-1.5 text-xs text-zinc-400">
               {Object.entries(CAT_LABEL).map(([cat, label]) => (
                 <li key={cat} className="flex items-center gap-2">
@@ -279,20 +289,20 @@ export default function HousePlans() {
             </ul>
             <div className="mt-3 space-y-1.5 border-t border-white/[0.06] pt-3 text-[11px] text-zinc-500">
               <div className="flex items-center gap-2">
-                <svg width="26" height="6">
-                  <line x1="0" y1="3" x2="26" y2="3" stroke="#e8ecf4" strokeWidth="3" />
+                <svg width="30" height="14" className="shrink-0 rounded-sm bg-white">
+                  <line x1="3" y1="7" x2="27" y2="7" stroke="#0b0b0c" strokeWidth="2.6" />
                 </svg>
                 Wall
               </div>
               <div className="flex items-center gap-2">
-                <svg width="26" height="6">
+                <svg width="30" height="14" className="shrink-0 rounded-sm bg-white">
                   <line
-                    x1="0"
-                    y1="3"
-                    x2="26"
-                    y2="3"
-                    stroke="rgba(232,236,244,0.5)"
-                    strokeWidth="1.4"
+                    x1="3"
+                    y1="7"
+                    x2="27"
+                    y2="7"
+                    stroke="#7b8595"
+                    strokeWidth="1.2"
                     strokeDasharray="5 4"
                   />
                 </svg>

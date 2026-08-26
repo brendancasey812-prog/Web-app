@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   Refrigerator,
   Salad,
+  Ruler,
 } from "lucide-react";
 
 /** True only after client hydration — avoids SSR/persisted-store mismatch. */
@@ -21,12 +22,13 @@ function useHydrated() {
   );
 }
 
-const nav = [
+const nav: { href: string; label: string; short?: string; icon: typeof Salad }[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/recipes", label: "Cookbook", icon: BookOpen },
   { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/groceries", label: "Groceries", icon: ShoppingCart },
   { href: "/kitchen", label: "Kitchen", icon: Refrigerator },
+  { href: "/house", label: "House Plans", short: "Plans", icon: Ruler },
 ];
 
 function Logo({ small }: { small?: boolean }) {
@@ -106,7 +108,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Mobile bottom tab bar (app format) */}
       <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-white/[0.08] bg-black/60 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
-        {nav.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, short, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link
@@ -119,7 +121,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-all ${active ? "bg-emerald-500/15" : ""}`}>
                 <Icon size={19} />
               </span>
-              {label}
+              {short ?? label}
             </Link>
           );
         })}

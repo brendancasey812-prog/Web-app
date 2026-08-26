@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Grid3x3, Layers, Maximize2, Palette, Ruler, Sofa } from "lucide-react";
+import { DoorOpen, Grid3x3, Layers, Maximize2, Palette, Ruler, Sofa } from "lucide-react";
 import { FloorPlan } from "@/components/FloorPlan";
 import {
   FLOOR_AREA,
@@ -9,7 +9,9 @@ import {
   HOUSE_WIDTH,
   LEVELS,
   PALETTE,
+  doorsForRoom,
   ftIn,
+  levelArea,
   roomArea,
 } from "@/lib/houseplan";
 
@@ -55,6 +57,7 @@ export default function HousePlans() {
   const [showGrid, setShowGrid] = useState(true);
   const [showFixtures, setShowFixtures] = useState(true);
   const [zoomToRoom, setZoomToRoom] = useState(true);
+  const [showDoors, setShowDoors] = useState(true);
   const [colorRooms, setColorRooms] = useState(false);
 
   const level = LEVELS.find((l) => l.id === levelId) ?? LEVELS[1];
@@ -65,7 +68,8 @@ export default function HousePlans() {
     setRoomId(null);
   };
 
-  const levelArea = level.rooms.reduce((sum, r) => sum + roomArea(r), 0);
+  const enclosed = levelArea(level);
+  const doors = room ? doorsForRoom(level, room) : [];
 
   return (
     <div className="mx-auto max-w-7xl">
@@ -161,6 +165,12 @@ export default function HousePlans() {
                 label="Furniture"
               />
               <Toggle
+                on={showDoors}
+                onClick={() => setShowDoors((v) => !v)}
+                icon={DoorOpen}
+                label="Doors"
+              />
+              <Toggle
                 on={colorRooms}
                 onClick={() => setColorRooms((v) => !v)}
                 icon={Palette}
@@ -181,6 +191,7 @@ export default function HousePlans() {
             zoomToRoom={zoomToRoom}
             showGrid={showGrid}
             showFixtures={showFixtures}
+            showDoors={showDoors}
             colorRooms={colorRooms}
           />
         </section>
@@ -202,8 +213,8 @@ export default function HousePlans() {
                 {[
                   ["Width", ftIn(room.w)],
                   ["Depth", ftIn(room.h)],
-                  ["Floor area", `${Math.round(roomArea(room))} sq ft`],
-                  ["Ceiling", ftIn(level.ceiling)],
+                  [room.exterior ? "Slab area" : "Floor area", `${Math.round(roomArea(room))} sq ft`],
+                  ["Ceiling", room.exterior ? "Open to sky" : ftIn(level.ceiling)],
                   ["Perimeter", ftIn(2 * (room.w + room.h))],
                   ["Type", CAT_LABEL[room.cat]],
                 ].map(([k, v]) => (
@@ -222,6 +233,28 @@ export default function HousePlans() {
                     .join(" and ")}
                   .
                 </p>
+              ) : null}
+
+              {doors.length ? (
+                <div className="mt-4">
+                  <h3 className="mb-2 text-[10px] uppercase tracking-wide text-zinc-500">
+                    Doors ({doors.length})
+                  </h3>
+                  <ul className="space-y-1">
+                    {doors.map((d, i) => (
+                      <li
+                        key={i}
+                        className="flex items-baseline justify-between gap-3 border-b border-white/[0.05] pb-1 text-xs last:border-0"
+                      >
+                        <span className="text-zinc-300">{d.label}</span>
+                        <span className="shrink-0 tabular-nums text-zinc-500">
+                          {d.kind === "opening" ? "cased" : d.kind === "slider" ? "slider" : "swing"} ·{" "}
+                          {ftIn(d.w)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
 
               {room.fixtures?.length ? (
@@ -254,9 +287,9 @@ export default function HousePlans() {
               <p className="mt-2 text-xs leading-5 text-zinc-400">{level.subtitle}</p>
               <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 {[
-                  ["Rooms", String(level.rooms.length)],
+                  ["Rooms", String(level.rooms.filter((r) => !r.exterior).length)],
                   ["Ceiling", ftIn(level.ceiling)],
-                  ["Floor area", `${Math.round(levelArea)} sq ft`],
+                  ["Floor area", `${Math.round(enclosed)} sq ft`],
                   ["Footprint", `${ftIn(HOUSE_WIDTH)} × ${ftIn(HOUSE_DEPTH)}`],
                 ].map(([k, v]) => (
                   <div key={k} className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2">
@@ -308,6 +341,24 @@ export default function HousePlans() {
                 </svg>
                 Cased opening (no wall)
               </div>
+              <div className="flex items-center gap-2">
+                <svg width="30" height="14" className="shrink-0 rounded-sm bg-white">
+                  <line x1="2" y1="3" x2="7" y2="3" stroke="#0b0b0c" strokeWidth="2.4" />
+                  <line x1="23" y1="3" x2="28" y2="3" stroke="#0b0b0c" strokeWidth="2.4" />
+                  <line x1="7" y1="3" x2="7" y2="12" stroke="#0b0b0c" strokeWidth="1.4" />
+                  <path d="M 23 3 A 9 9 0 0 0 7 12" fill="none" stroke="#0b0b0c" strokeWidth="0.9" />
+                </svg>
+                Door, showing its swing
+              </div>
+              <div className="flex items-center gap-2">
+                <svg width="30" height="14" className="shrink-0 rounded-sm bg-white">
+                  <line x1="2" y1="7" x2="7" y2="7" stroke="#0b0b0c" strokeWidth="2.4" />
+                  <line x1="23" y1="7" x2="28" y2="7" stroke="#0b0b0c" strokeWidth="2.4" />
+                  <line x1="7" y1="5" x2="17" y2="5" stroke="#0b0b0c" strokeWidth="1.8" />
+                  <line x1="14" y1="9" x2="23" y2="9" stroke="#0b0b0c" strokeWidth="1.8" />
+                </svg>
+                Sliding door
+              </div>
             </div>
           </div>
         </aside>
@@ -348,6 +399,11 @@ export default function HousePlans() {
                         style={{ background: PALETTE[r.cat].accent }}
                       />
                       {r.name}
+                      {r.exterior && (
+                        <span className="text-[10px] uppercase tracking-wide text-zinc-600">
+                          exterior
+                        </span>
+                      )}
                     </span>
                   </td>
                   <td className="py-2 pr-3 tabular-nums text-zinc-400">{ftIn(r.w)}</td>
@@ -355,15 +411,17 @@ export default function HousePlans() {
                   <td className="py-2 pr-3 tabular-nums text-zinc-400">
                     {Math.round(roomArea(r))} sq ft
                   </td>
-                  <td className="py-2 tabular-nums text-zinc-400">{ftIn(level.ceiling)}</td>
+                  <td className="py-2 tabular-nums text-zinc-400">
+                    {r.exterior ? "—" : ftIn(level.ceiling)}
+                  </td>
                 </tr>
               ))}
               <tr className="text-zinc-300">
-                <td className="pt-2 pr-3 font-semibold">Total</td>
+                <td className="pt-2 pr-3 font-semibold">Total enclosed</td>
                 <td className="pt-2 pr-3" />
                 <td className="pt-2 pr-3" />
                 <td className="pt-2 pr-3 tabular-nums font-semibold">
-                  {Math.round(levelArea)} sq ft
+                  {Math.round(enclosed)} sq ft
                 </td>
                 <td className="pt-2" />
               </tr>

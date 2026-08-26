@@ -10,7 +10,9 @@ import {
   REAR_BUMP_WIDTH,
   ftIn,
   interiorWalls,
+  levelBounds,
   roomArea,
+  type Door,
   type Level,
   type Room,
 } from "@/lib/houseplan";
@@ -205,6 +207,80 @@ function RoomLabel({
   );
 }
 
+/**
+ * A door drawn the way a plan draws one: the wall is erased across the
+ * opening, jambs are ticked, and the leaf sweeps a quarter-circle arc.
+ * A cased opening gets the gap and jambs but no leaf; a slider gets two
+ * offset panels instead of a swing.
+ */
+function DoorMark({
+  d,
+  s,
+  X,
+  Y,
+}: {
+  d: Door;
+  s: number;
+  X: (ft: number) => number;
+  Y: (ft: number) => number;
+}) {
+  const hx = X(d.x), hy = Y(d.y);
+  const along = d.axis === "h" ? { x: d.hand, y: 0 } : { x: 0, y: d.hand };
+  const perp = d.axis === "h" ? { x: 0, y: d.swing } : { x: d.swing, y: 0 };
+  const r = d.w * s;
+  const ax = hx + along.x * r, ay = hy + along.y * r; // far jamb
+  const bx = hx + perp.x * r, by = hy + perp.y * r; // leaf tip, swung open
+
+  /* Which way round the arc runs, from the far jamb to the open leaf. */
+  const cross = (ax - hx) * (by - hy) - (ay - hy) * (bx - hx);
+  const sweep = cross > 0 ? 1 : 0;
+
+  const t = 3.4; // jamb tick half-length, px
+  return (
+    <g pointerEvents="none">
+      {/* Erase the wall across the opening */}
+      <line x1={hx} y1={hy} x2={ax} y2={ay} stroke={PAPER} strokeWidth={7} strokeLinecap="butt" />
+      {d.axis === "h" ? (
+        <>
+          <line x1={hx} y1={hy - t} x2={hx} y2={hy + t} stroke={INK} strokeWidth={1.6} />
+          <line x1={ax} y1={ay - t} x2={ax} y2={ay + t} stroke={INK} strokeWidth={1.6} />
+        </>
+      ) : (
+        <>
+          <line x1={hx - t} y1={hy} x2={hx + t} y2={hy} stroke={INK} strokeWidth={1.6} />
+          <line x1={ax - t} y1={ay} x2={ax + t} y2={ay} stroke={INK} strokeWidth={1.6} />
+        </>
+      )}
+
+      {d.kind === "slider" ? (
+        <>
+          <line
+            x1={hx + perp.x * 3} y1={hy + perp.y * 3}
+            x2={hx + along.x * r * 0.55 + perp.x * 3} y2={hy + along.y * r * 0.55 + perp.y * 3}
+            stroke={INK} strokeWidth={2.2}
+          />
+          <line
+            x1={hx + along.x * r * 0.45 - perp.x * 3} y1={hy + along.y * r * 0.45 - perp.y * 3}
+            x2={ax - perp.x * 3} y2={ay - perp.y * 3}
+            stroke={INK} strokeWidth={2.2}
+          />
+        </>
+      ) : d.kind === "opening" ? null : (
+        <>
+          <line x1={hx} y1={hy} x2={bx} y2={by} stroke={INK} strokeWidth={1.6} />
+          <path
+            d={`M ${ax} ${ay} A ${r} ${r} 0 0 ${sweep} ${bx} ${by}`}
+            fill="none"
+            stroke={INK}
+            strokeWidth={0.9}
+            opacity={0.75}
+          />
+        </>
+      )}
+    </g>
+  );
+}
+
 export interface FloorPlanProps {
   level: Level;
   /** Room to frame and call out, or null for the whole floor. */
@@ -214,6 +290,7 @@ export interface FloorPlanProps {
   zoomToRoom: boolean;
   showGrid: boolean;
   showFixtures: boolean;
+  showDoors: boolean;
   /** Wash each room in its category tint. Off = a plain black-line-on-white drawing. */
   colorRooms: boolean;
 }
@@ -225,9 +302,12 @@ export function FloorPlan({
   zoomToRoom,
   showGrid,
   showFixtures,
+  showDoors,
   colorRooms,
 }: FloorPlanProps) {
   const selected = level.rooms.find((r) => r.id === selectedId) ?? null;
+  /** A slab outside the wall line gets dimensioned in place of the rear bump-out. */
+  const pad = level.rooms.find((r) => r.exterior) ?? null;
 
   /* ---- Fit the framed area onto the sheet: feet → px. ------------------- */
   const { s, ox, oy } = useMemo(() => {
@@ -239,12 +319,15 @@ export function FloorPlan({
             w: selected.w + FRAME_MARGIN_ROOM * 2,
             h: selected.h + FRAME_MARGIN_ROOM * 2,
           }
-        : {
-            x: -FRAME_MARGIN_FLOOR,
-            y: -FRAME_MARGIN_FLOOR,
-            w: HOUSE_WIDTH + FRAME_MARGIN_FLOOR * 2,
-            h: HOUSE_DEPTH + FRAME_MARGIN_FLOOR * 2,
-          };
+        : (() => {
+            const b = levelBounds(level);
+            return {
+              x: b.x - FRAME_MARGIN_FLOOR,
+              y: b.y - FRAME_MARGIN_FLOOR,
+              w: b.w + FRAME_MARGIN_FLOOR * 2,
+              h: b.h + FRAME_MARGIN_FLOOR * 2,
+            };
+          })();
     const scale = Math.min(
       (SHEET_W - SHEET_PAD * 2) / frame.w,
       (SHEET_H - SHEET_PAD * 2) / frame.h,
@@ -254,7 +337,7 @@ export function FloorPlan({
       ox: (SHEET_W - frame.w * scale) / 2 - frame.x * scale,
       oy: (SHEET_H - frame.h * scale) / 2 - frame.y * scale,
     };
-  }, [selected, zoomToRoom]);
+  }, [selected, zoomToRoom, level]);
 
   const X = (ft: number) => ox + ft * s;
   const Y = (ft: number) => oy + ft * s;
@@ -336,6 +419,9 @@ export function FloorPlan({
               fill={colorRooms ? PALETTE[r.cat].fill : PAPER}
               opacity={dim ? 0.45 : 1}
               className="cursor-pointer"
+              stroke={r.exterior ? INK_FAINT : undefined}
+              strokeWidth={r.exterior ? 1.4 : undefined}
+              strokeDasharray={r.exterior ? "6 4" : undefined}
             />
             {selected?.id === r.id && (
               <rect
@@ -421,6 +507,9 @@ export function FloorPlan({
         pointerEvents="none"
       />
 
+      {/* Doors — drawn last so they cut the openings back out of the walls */}
+      {showDoors && level.doors.map((d, i) => <DoorMark key={i} d={d} s={s} X={X} Y={Y} />)}
+
       {/* Room labels */}
       {level.rooms.map((r) => (
         <RoomLabel key={`lb-${r.id}`} r={r} dim={!!selected && selected.id !== r.id} s={s} X={X} Y={Y} />
@@ -474,16 +563,41 @@ export function FloorPlan({
             X={X}
             Y={Y}
           />
-          <Dim
-            axis="h"
-            from={0}
-            to={REAR_BUMP_WIDTH}
-            at={HOUSE_DEPTH + 3.2}
-            label={ftIn(REAR_BUMP_WIDTH)}
-            side={-1}
-            X={X}
-            Y={Y}
-          />
+          {pad ? (
+            <>
+              <Dim
+                axis="h"
+                from={pad.x}
+                to={pad.x + pad.w}
+                at={pad.y + pad.h + 3.2}
+                label={ftIn(pad.w)}
+                side={-1}
+                X={X}
+                Y={Y}
+              />
+              <Dim
+                axis="v"
+                from={pad.y}
+                to={pad.y + pad.h}
+                at={pad.x + pad.w + 3.2}
+                label={ftIn(pad.h)}
+                side={-1}
+                X={X}
+                Y={Y}
+              />
+            </>
+          ) : (
+            <Dim
+              axis="h"
+              from={0}
+              to={REAR_BUMP_WIDTH}
+              at={HOUSE_DEPTH + 3.2}
+              label={ftIn(REAR_BUMP_WIDTH)}
+              side={-1}
+              X={X}
+              Y={Y}
+            />
+          )}
         </>
       )}
 

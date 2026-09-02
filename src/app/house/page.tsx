@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { DoorOpen, Grid3x3, Layers, Maximize2, Palette, Ruler, Sofa } from "lucide-react";
+import { Box, DoorOpen, Grid3x3, Layers, Maximize2, Palette, Ruler, Sofa } from "lucide-react";
+import { RoomStudio } from "@/components/RoomStudio";
 import { FloorPlan } from "@/components/FloorPlan";
 import {
   HOUSE_DEPTH,
@@ -53,6 +54,7 @@ function Toggle({
 }
 
 export default function HousePlans() {
+  const [mode, setMode] = useState<"plans" | "studio">("plans");
   const [levelId, setLevelId] = useState(LEVELS[1].id); // open on the main level
   const [roomId, setRoomId] = useState<string | null>(null);
   const [showGrid, setShowGrid] = useState(true);
@@ -83,6 +85,31 @@ export default function HousePlans() {
         </p>
       </header>
 
+      {/* ---- Plans or studio --------------------------------------------- */}
+      <div className="mb-4 inline-flex rounded-xl border border-white/[0.08] bg-white/[0.02] p-1">
+        {(
+          [
+            ["plans", "Floor plans", Ruler],
+            ["studio", "Room studio", Box],
+          ] as const
+        ).map(([id, label, Icon]) => (
+          <button
+            key={id}
+            onClick={() => setMode(id)}
+            aria-pressed={mode === id}
+            className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
+              mode === id ? "bg-emerald-400/15 text-emerald-300" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            <Icon size={15} /> {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "studio" ? (
+        <RoomStudio />
+      ) : (
+        <>
       {/* ---- Level tabs -------------------------------------------------- */}
       <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
         {[...LEVELS].reverse().map((l) => {
@@ -441,6 +468,8 @@ export default function HousePlans() {
           schedule all update together.
         </p>
       </section>
+        </>
+      )}
     </div>
   );
 }

@@ -97,6 +97,8 @@ export interface Fixture {
   y: number;
   w: number;
   h: number;
+  /** How tall it stands, in feet. Only the room studio uses this. */
+  z?: number;
   /** `soft` = furniture, `plumb` = plumbing fixture, `built` = built-in / millwork. */
   kind?: "soft" | "plumb" | "built";
 }
@@ -155,14 +157,13 @@ export interface Level {
 }
 
 /* ==========================================================================
- *  BASEMENT — laundry at the front, man cave across the middle, then the home
- *  theatre and a guest suite filling the rear block, so the level matches the
- *  main floor's envelope exactly.
+ *  BASEMENT — laundry at the front, man cave across the middle, the games room
+ *  behind it, and the home theatre last of all at the very back.
  * ========================================================================== */
 const basement: Level = {
   id: "basement",
   name: "Basement",
-  subtitle: "Man cave · theatre · guest suite",
+  subtitle: "Man cave · games · theatre",
   ceiling: 8.5,
   footprint: FOOTPRINT_FULL,
   rooms: [
@@ -231,12 +232,11 @@ const basement: Level = {
       y: 14,
       w: 48,
       h: 16,
-      note: "One long room across the whole width — screen and sectional at one end, pool table and wet bar at the other.",
+      note: "One long room across the whole width — screen and sectional at one end, the wet bar at the other, opening straight through into the games room behind.",
       fixtures: [
         { label: "Media wall", x: 7, y: 14.4, w: 11, h: 1, kind: "built" },
         { label: "Coffee table", x: 9.5, y: 19.5, w: 5, h: 2.5, kind: "soft" },
         { label: "Sectional couch", x: 6, y: 23, w: 13, h: 3.5, kind: "soft" },
-        { label: "Pool table", x: 24, y: 18.5, w: 9, h: 4.5, kind: "soft" },
         { label: "Recliners", x: 40, y: 17, w: 6, h: 3.5, kind: "soft" },
         { label: "Bar stools", x: 24, y: 25, w: 14, h: 1.4, kind: "soft" },
         { label: "Bar counter", x: 24, y: 26.5, w: 14, h: 2.5, kind: "built" },
@@ -244,74 +244,40 @@ const basement: Level = {
       ],
     },
     {
-      id: "b-theater",
-      name: "Home Theatre",
+      id: "b-games",
+      name: "Games Room",
       cat: "living",
       x: 0,
       y: 30,
       w: 34,
       h: 14,
-      note: "Behind the man cave, on its own door so the light can be shut out. Two rows of recliners facing the screen wall.",
+      note: "The basement games room, straight off the man cave through a wide cased opening. Pool, shuffleboard and cards, with the arcade along the far wall.",
+      openTo: ["b-mancave"],
       fixtures: [
-        { label: "Screen wall", x: 8, y: 30.4, w: 18, h: 1, kind: "built" },
-        { label: "Front row", x: 6, y: 34.5, w: 10, h: 3.5, kind: "soft" },
-        { label: "Rear row", x: 18, y: 34.5, w: 10, h: 3.5, kind: "soft" },
-        { label: "Snack counter", x: 6, y: 41, w: 12, h: 2, kind: "built" },
+        { label: "Pool table", x: 3, y: 32, w: 9, h: 4.5, z: 2.7, kind: "soft" },
+        { label: "Poker table", x: 16, y: 31.5, w: 6.5, h: 6.5, z: 2.5, kind: "soft" },
+        { label: "Shuffleboard", x: 3, y: 39, w: 22, h: 2.5, z: 2.6, kind: "soft" },
+        { label: "Arcade cabinets", x: 26, y: 30.5, w: 6, h: 3, z: 6, kind: "built" },
+        { label: "Dart cabinet", x: 30.5, y: 35, w: 3, h: 1.2, z: 6, kind: "built" },
+        { label: "Lounge chairs", x: 26, y: 39.5, w: 6, h: 3, z: 3, kind: "soft" },
       ],
     },
     {
-      id: "b-store",
-      name: "Storage & Wine",
-      cat: "service",
+      id: "b-theater",
+      name: "Home Theatre",
+      cat: "living",
       x: 0,
       y: 44,
-      w: 12,
+      w: 34,
       h: 18,
-      note: "Cool corner at the back of the basement — wine racking and bulk shelving.",
+      note: "The last room in the house — right at the back of the basement, on its own door so the light can be shut out. Three rows facing the screen wall.",
       fixtures: [
-        { label: "Wine racks", x: 0.4, y: 44.4, w: 1.8, h: 8, kind: "built" },
-        { label: "Shelving", x: 0.4, y: 54, w: 10, h: 2, kind: "built" },
-      ],
-    },
-    {
-      id: "b-hall",
-      name: "Guest Hall",
-      cat: "circ",
-      x: 12,
-      y: 44,
-      w: 10,
-      h: 6,
-      note: "Links the theatre to the guest suite, the bathroom and the stores.",
-    },
-    {
-      id: "b-gbath",
-      name: "Guest Bathroom",
-      cat: "bath",
-      x: 12,
-      y: 50,
-      w: 10,
-      h: 12,
-      note: "Off the guest hall, serving the guest bedroom.",
-      fixtures: [
-        { label: "Vanity", x: 12.5, y: 50.5, w: 5, h: 2.2, kind: "plumb" },
-        { label: "Toilet", x: 12.5, y: 54, w: 2.5, h: 2.5, kind: "plumb" },
-        { label: "Shower", x: 17, y: 57, w: 4.5, h: 4, kind: "plumb" },
-      ],
-    },
-    {
-      id: "b-guest",
-      name: "Guest Bedroom",
-      cat: "sleep",
-      x: 22,
-      y: 44,
-      w: 12,
-      h: 18,
-      note: "The bedroom on the lower level, at the back of the basement with the guest bathroom across the hall.",
-      fixtures: [
-        { label: "Queen bed", x: 25, y: 44.5, w: 5.5, h: 7, kind: "soft" },
-        { label: "Nightstand", x: 23.2, y: 44.5, w: 1.6, h: 1.8, kind: "soft" },
-        { label: "Dresser", x: 31.6, y: 50, w: 2, h: 5, kind: "soft" },
-        { label: "Closet", x: 22.4, y: 58.5, w: 8, h: 2.5, kind: "built" },
+        { label: "Screen wall", x: 6, y: 60.6, w: 22, h: 1.2, z: 8, kind: "built" },
+        { label: "Front row", x: 8, y: 55.5, w: 18, h: 3.5, z: 3.4, kind: "soft" },
+        { label: "Middle row", x: 8, y: 50.5, w: 18, h: 3.5, z: 3.4, kind: "soft" },
+        { label: "Back row", x: 8, y: 45.5, w: 18, h: 3.5, z: 3.4, kind: "soft" },
+        { label: "Projector shelf", x: 1.5, y: 44.4, w: 3.5, h: 1.5, z: 4, kind: "built" },
+        { label: "Snack counter", x: 27, y: 44.4, w: 6, h: 2, z: 3.5, kind: "built" },
       ],
     },
   ],
@@ -320,11 +286,7 @@ const basement: Level = {
     { x: 28, y: 3, axis: "v", w: 2.8, hand: 1, swing: 1, label: "Bathroom" },
     { x: 21, y: 14, axis: "h", w: 6, hand: 1, swing: 1, kind: "opening", label: "Landing into the man cave" },
     { x: 41, y: 14, axis: "h", w: 3, hand: 1, swing: -1, label: "Laundry" },
-    { x: 15, y: 30, axis: "h", w: 3.5, hand: 1, swing: 1, label: "Home theatre" },
-    { x: 15, y: 44, axis: "h", w: 3, hand: 1, swing: 1, label: "Guest hall" },
-    { x: 12, y: 45, axis: "v", w: 3, hand: 1, swing: -1, label: "Storage & wine" },
-    { x: 22, y: 45, axis: "v", w: 3, hand: 1, swing: 1, label: "Guest bedroom" },
-    { x: 14, y: 50, axis: "h", w: 2.8, hand: 1, swing: 1, label: "Guest bathroom" },
+    { x: 15, y: 44, axis: "h", w: 3.5, hand: 1, swing: 1, label: "Home theatre" },
   ],
 };
 
@@ -817,6 +779,14 @@ export const LEVELS: Level[] = [basement, main, upper, studio];
 
 
 export const roomArea = (r: Room) => r.w * r.h;
+
+/** How tall a piece stands. Anything without its own height gets a sane default. */
+export function fixtureHeight(f: Pick<Fixture, "z" | "kind">) {
+  if (f.z !== undefined) return f.z;
+  if (f.kind === "built") return 3.5;
+  if (f.kind === "plumb") return 2.6;
+  return 2.4;
+}
 
 /** Enclosed floor area of a level — the balcony pad and any other slab is not it. */
 export function levelArea(l: Level) {

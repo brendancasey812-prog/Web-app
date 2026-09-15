@@ -101,6 +101,10 @@ export interface Recipe {
   components?: RecipeComponent[];
   steps: string[];
   emoji: string;
+  /** Downscaled data-URL photo shown in Cookbook V2. */
+  image?: string;
+  /** Total cook time in minutes. */
+  cookTimeMin?: number;
   /** Which meal slot this recipe belongs to (groups the "add" picker). */
   category: MealType;
 }
@@ -166,6 +170,73 @@ export interface Profile {
   sex?: Sex;
 }
 
+/** Who the app is planning for. "couple" is a family of exactly two. */
+export type HouseholdMode = "individual" | "couple" | "family";
+
+/**
+ * An extra person the plan feeds, beyond the primary user (whose body and
+ * goals live in `profile` / `goals`). So individual = 0 members here,
+ * couple = 1, family = however many were added.
+ */
+export interface Member {
+  id: string;
+  name: string;
+  heightIn: number;
+  weightLb: number;
+  age: number;
+  birthDate?: string;
+  sex?: Sex;
+  goals: Goals;
+}
+
+// ---- Cost & stores ----
+
+/**
+ * A grocery store the user shops at. `lat`/`lng` are optional because a store
+ * can be added by hand before (or without) geocoding — it just won't appear on
+ * the map or get a distance until coordinates are known.
+ */
+export interface Store {
+  id: string;
+  name: string;
+  /** Street line, e.g. "1450 Ocean Ave". Optional — city/state/zip is enough. */
+  address?: string;
+  city: string;
+  state: string;
+  zip: string;
+  lat?: number;
+  lng?: number;
+  emoji: string;
+  /** How the store got here: typed in, or pulled from the nearby-store search. */
+  source?: "manual" | "search";
+}
+
+/**
+ * What one `unit` of a food costs at one store — e.g. chicken is priced per
+ * `oz`, milk per `cup`, so the cost of an ingredient line is simply
+ * `quantity x pricePerUnit`, exactly mirroring how calories work.
+ *
+ * `storeId` may be BASE_STORE_ID, which is the fallback price used for any
+ * store that has no price of its own for that food.
+ */
+export interface Price {
+  storeId: string;
+  foodId: string;
+  /** US dollars per one `unit` of the food. */
+  pricePerUnit: number;
+  /** ISO date string (yyyy-MM-dd) — when this price was last touched. */
+  updatedAt: string;
+}
+
+/** Where the user is shopping from, used to sort stores by distance. */
+export interface HomeLocation {
+  city: string;
+  state: string;
+  zip: string;
+  lat?: number;
+  lng?: number;
+}
+
 export interface AppData {
   foods: Food[];
   inventory: InventoryItem[];
@@ -175,6 +246,18 @@ export interface AppData {
   manualGroceries: ManualGrocery[];
   goals: Goals;
   profile: Profile;
+  /** Individual / couple / family — drives household totals across the app. */
+  householdMode: HouseholdMode;
+  /** Extra people beyond the primary user; empty when mode is "individual". */
+  members: Member[];
   focusAreas: FocusArea[];
   history: PurchaseHistoryEntry[];
+  /** Stores the user shops at (the base price row is not one of these). */
+  stores: Store[];
+  /** Per-store, per-food unit prices. */
+  prices: Price[];
+  /** Which store's prices the whole app is costed against. */
+  selectedStoreId: string;
+  /** Where 'nearby' is measured from. */
+  home: HomeLocation;
 }

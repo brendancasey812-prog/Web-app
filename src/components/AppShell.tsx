@@ -10,6 +10,8 @@ import {
   ShoppingCart,
   Refrigerator,
   Salad,
+  DollarSign,
+  MapPin,
   Ruler,
 } from "lucide-react";
 
@@ -28,6 +30,8 @@ const nav: { href: string; label: string; short?: string; icon: typeof Salad }[]
   { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/groceries", label: "Groceries", icon: ShoppingCart },
   { href: "/kitchen", label: "Kitchen", icon: Refrigerator },
+  { href: "/costs", label: "Costs", icon: DollarSign },
+  { href: "/stores", label: "Stores", icon: MapPin },
   { href: "/house", label: "House Plans", short: "Plans", icon: Ruler },
 ];
 
@@ -107,19 +111,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Mobile bottom tab bar (app format) */}
-      <nav className="fixed inset-x-0 bottom-0 z-20 flex border-t border-white/[0.08] bg-black/60 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-20 flex overflow-x-auto border-t border-white/[0.08] bg-black/60 px-1 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
         {nav.map(({ href, label, short, icon: Icon }) => {
           const active = pathname === href;
           return (
             <Link
               key={href}
               href={href}
-              className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+              className={`flex min-w-16 flex-1 shrink-0 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
                 active ? "text-emerald-400" : "text-zinc-500"
               }`}
             >
-              <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-all ${active ? "bg-emerald-500/15" : ""}`}>
-                <Icon size={19} />
+              <span className={`flex h-6 w-10 items-center justify-center rounded-full transition-all ${active ? "bg-emerald-500/15" : ""}`}>
+                <Icon size={17} />
               </span>
               {short ?? label}
             </Link>
